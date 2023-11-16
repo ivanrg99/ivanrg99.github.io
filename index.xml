@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ByteBlog</title>
+    <link>/</link>
+    <description>Recent content on ByteBlog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>es-Es</language>
+    <lastBuildDate>Thu, 25 Aug 2022 21:30:04 +0800</lastBuildDate>
+    <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>HashMaps y Arrays Dinámicos en C Parte 1</title>
+      <link>/hash_array_part1/</link>
+      <pubDate>Thu, 16 Nov 2023 20:30:52 +0100</pubDate>
+      <guid>/hash_array_part1/</guid>
+      <description>Introducción Pienso que todo el mundo debería saber C y poder desenvolverse con soltura con él. No obstante, hacer proyectos con este lenguaje suele hacerse pesado, sobre todo por su librería estándar (con funcionalidad escasa, y la poca que tiene, mala), que a penas contiene algoritmos o estructuras de datos. De entre ellas, de las más populares e importantes que hay son el hashmap (o hash table, table, diccionario&amp;hellip;) y los arrays dinámicos (resizeable arrays, array lists, vectores&amp;hellip;).</description>
+    </item>
+  </channel>
+</rss>

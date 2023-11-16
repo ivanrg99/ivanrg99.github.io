@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es-Es"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <meta name="description" content="Introducción Pienso que todo el mundo debería saber C y poder desenvolverse con soltura con él. No obstante, hacer proyectos con este lenguaje suele hacerse pesado, sobre todo por su librería estándar (con funcionalidad escasa, y la poca que tiene, mala), que a penas contiene algoritmos o estructuras de datos. De entre ellas, de las más populares e importantes que hay son el hashmap (o hash table, table, diccionario&hellip;) y los arrays dinámicos (resizeable arrays, array lists, vectores&hellip;).">  
+
+  <title>
+    
+      HashMaps y Arrays Dinámicos en C Parte 1
+    
+  </title>
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/" />
+  
+  
+  
+  <link rel="stylesheet" href="/css/main.c5af9bae99b4a3d315b9f39305ffff27e9c3383fbbfd8b5fcaf2237667021a333a982fb958d1813a720b0a660b14022337553ae1ca93ef2ee17c4ae628ac19cb.css" integrity="sha512-xa&#43;brpm0o9MVufOTBf//J&#43;nDOD&#43;7/YtfyvIjdmcCGjM6mC&#43;5WNGBOnILCmYLFAIjN1U64cqT7y7hfErmKKwZyw==" />
+  
+</head>
+<body a="auto">
+        <main class="page-content" aria-label="Content">
+            <div class="w">
+<a href="/">..</a>
+
+
+<article>
+    <p class="post-meta">
+        <time datetime="2023-11-16 20:30:52 &#43;0100 CET">
+            2023-11-16
+        </time>
+    </p>
+
+    <h1>HashMaps y Arrays Dinámicos en C Parte 1</h1>
+
+    
+
+    <h2 id="introducción">Introducción</h2>
+<p>Pienso que todo el mundo debería saber C y poder desenvolverse con soltura con él. No obstante, hacer proyectos con este lenguaje suele hacerse pesado, sobre todo por su librería estándar (con funcionalidad escasa, y la poca que tiene, mala), que a penas contiene algoritmos o estructuras de datos. De entre ellas, de las más populares e importantes que hay son el hashmap (o hash table, table, diccionario&hellip;) y los arrays dinámicos (resizeable arrays, array lists, vectores&hellip;). Mucha gente al empezar un proyecto en C se da de bruces con la falta de estas dos estructuras de datos, que muchos consideran fundamental. La otra sería strings en condiciones (en este artículo veremos un poco sobre strings en C, pero no demasiado).</p>
+<p>Con este artículo pretendo ayudar a la gente a quitarse la tirria y la fricción que se suele tener al programar en este lenguaje tan espartano, dando dos soluciones. Este artículo asume que el lector conoce la sintaxis de C y conceptos como punteros, la diferencia entre el stack y el heap, header files&hellip;. La primera de estas soluciones es&hellip;</p>
+<h2 id="usar-una-librería">¡Usar una librería!</h2>
+<p>Aunque la librería estándar no tenga estas estructuras de datos, existen muchas librerías disponibles que implementan estas estructuras de datos, de una forma más o menos general. Si te da pereza programar en C o te genera fricción no tenerlas, ¡importa una librería!</p>
+<p>Existen muchas, pero hay una bastante popular que además incluye tanto hash maps como dynamic arrays. Se trata de <a href="https://nothings.org/stb_ds/">stb_ds.h</a>. Forman parte del proyecto <a href="https://github.com/nothings/stb/">stb</a> de Sean Barrett, mítico programador de videojuegos. El proyecto consiste en muchas pequeñas librerías header-only (es decir, basta con copiar y pegar el archivo .h en tu proyecto e importarlo sin más), y puedes encontrar de todo. En este caso, usaremos <strong>stb_ds.h</strong>.</p>
+<h3 id="programa-de-prueba">Programa de prueba</h3>
+<p>Realizaremos un programa de prueba para poner en práctica la librería. Para que sea breve, crearemos todo el código en un mismo archivo <em>main.c</em>, que compilaremos con <code>gcc -Wall -Wextra main.c -o main</code>. Nada más.</p>
+<p>En el programa, tendremos una base de datos de fugitivos, cada uno de ellos con una recompensa por captura y una lista de apodos que posee el criminal. Para ello tendremos un struct Criminal, que estará formado por un array dinámico de motes, el nombre del criminal y una cantidad de dinero (la recompensa). Luego, pondremos estos fugitivos en un hash map, para tener una base de datos en memoria de los mismos, donde la clave sera el nombre del fugitivo y el valor será un booleano, que indique si ha sido capturado o no.</p>
+<h3 id="strings">Strings</h3>
+<p>Empezaremos primero creando nuestra propia clase de strings, ya que los de C dejan mucho que desear. No implementaremos una clase de strings completa (con sus funciones de manipulación de texto, soporte para diferentes encodings y demás), porque sería demasiado. Lo único que haremos será hacer un pequeño wrapper sobre las strings de C, implementado como un fat pointer.</p>
+<p>Por un fat pointer, entendemos un puntero normal y corriente, pero con más datos además del puntero en si. Quedará más claro con el ejemplo:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// main.c
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>str;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} string;
+</span></span></code></pre></div><p>Nuestra clase string no es ni más ni menos que un fat pointer, un simple struct que contiene un campo con el valor de nuestros datos (en este caso, una string de C) y campos extra sobre el valor que apunta, algo así como unos <em>metadatos</em> sobre el puntero (en este caso, una campo len que designa la longitud del string). Esto nos permite saber la longitud de una string en O(1), ya que no tenemos que atravesar toda la string hasta encontrar \0.</p>
+<p>Cuanto queramos pasar una string como argumento, simplemente la pasaremos por copia (por valor) y ya. Accediendo al campo de .str tendremos acceso a todas las funciones de la libreria estándar que lidian con strings, además del campo extra que siempre viene útil.</p>
+<p>Veamos ahora cómo construiríamos una string:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// main.c
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>str;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string name <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        .str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Martinez&#34;</span>,
+</span></span><span style="display:flex;"><span>        .len <span style="color:#f92672">=</span> <span style="color:#a6e22e">strlen</span>(<span style="color:#e6db74">&#34;Martinez&#34;</span>)
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;name: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, name.str);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;length: %ld</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, name.len);
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Podemos simplificar la creación de strings usando una sencilla macro (importante no abusar de ellas):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>str;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define string(s) \
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    (string) { (char *)s, strlen(s) }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;Martinez&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;name: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, name.str);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;length: %ld</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, name.len);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>¡Mucho mejor! Ahora, descargaremos stb_ds.h desde github y lo copiaremos en el mismo directorio que nuestro main.c. Para utilizarlo, tan solo debemos incluir el archivo y definir una constante (¡solo una vez!). Podemos encontrar más información en leyendo los comentarios en stb_ds.h, pero básicamente añadiremos esto a nuestro main.c</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#define STB_DS_IMPLEMENTATION
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;stb_ds.h&#34;</span><span style="color:#75715e">
+</span></span></span></code></pre></div><p>Ahora crearemos nuestro struct Criminal:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> 
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string name;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> reward;
+</span></span><span style="display:flex;"><span>    string <span style="color:#f92672">*</span>nicknames;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>} Criminal;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">criminal_init</span>(Criminal <span style="color:#f92672">*</span>c) {
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;&#34;</span>);
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>reward <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>nicknames <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Y ahora, poniéndolo todo junto en main.c</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define STB_DS_IMPLEMENTATION
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;stb_ds.h&#34;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>str;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define string(s) \
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    (string) { (char *)s, strlen(s) }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string name;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> reward;
+</span></span><span style="display:flex;"><span>    string <span style="color:#f92672">*</span>nicknames;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>} Criminal;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">criminal_init</span>(Criminal <span style="color:#f92672">*</span>c)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;&#34;</span>);
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>reward <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>nicknames <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    Criminal criminal;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">criminal_init</span>(<span style="color:#f92672">&amp;</span>criminal);
+</span></span><span style="display:flex;"><span>    criminal.name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;Martinez&#34;</span>);
+</span></span><span style="display:flex;"><span>    criminal.reward <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrput</span>(criminal.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El bueno&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrput</span>(criminal.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El malo&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrput</span>(criminal.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El feo&#34;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Name: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, criminal.name.str);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Reward: %ld</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, criminal.reward);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Nicknames:</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#a6e22e">stbds_arrlen</span>(criminal.nicknames); <span style="color:#f92672">++</span>i)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, criminal.nicknames[i].str);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Gracias a esta estupenda librería, añadir elementos a nuestro array es tan fácil como usar la función <em>arrput</em>, y podemos conseguir la longitud con <em>arrlen</em>. No veremos más operaciones, como la de liberar la memoria, insertar elementos y demás; pero todo está en la documentación, dentro del header file. No obstante, es importante tener cuidado, ya que al hacer free al array, solo se libera la memoria del array en si, pero no la memoria que pueda tener el struct dentro. En nuestro caso:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>    <span style="color:#75715e">// Creamos criminal
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    Criminal sanchez;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">criminal_init</span>(<span style="color:#f92672">&amp;</span>sanchez);
+</span></span><span style="display:flex;"><span>    sanchez.name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;Sanchez&#34;</span>);
+</span></span><span style="display:flex;"><span>    sanchez.reward <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrput</span>(sanchez.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El bueno&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrput</span>(sanchez.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El malo&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrput</span>(sanchez.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El feo&#34;</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// El último mote lo creamos en el heap
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>nombre <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#ae81ff">3</span><span style="color:#f92672">*</span><span style="color:#66d9ef">sizeof</span>(<span style="color:#66d9ef">char</span>));
+</span></span><span style="display:flex;"><span>    nombre[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;o&#39;</span>;
+</span></span><span style="display:flex;"><span>    nombre[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;k&#39;</span>;
+</span></span><span style="display:flex;"><span>    nombre[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    string nombre_str <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        .str <span style="color:#f92672">=</span> nombre,
+</span></span><span style="display:flex;"><span>        .len <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%p</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, nombre); <span style="color:#75715e">// ok
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">stbds_arrput</span>(sanchez.nicknames, nombre_str);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">stbds_arrfree</span>(sanchez.nicknames); <span style="color:#75715e">// liberamos el array
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%ld</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">stbds_arrlen</span>(sanchez.nicknames)); <span style="color:#75715e">// 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, nombre); <span style="color:#75715e">// ok ????
+</span></span></span></code></pre></div><p>Aún habiendo liberado el array, tenemos pérdida de memoria en nuestro <strong>nombre</strong>. arrfree no es tan sofisticado como para saber qué tipo de struct estamos usando, y saber exactamente como liberar su memoria. Esperaríamos que al usar nombre, el resultado no fuese &ldquo;ok&rdquo;, sino que tuviésemos algún tipo de crash o basura. Podemos liberar la memoria con una llamada a free normal y corriente. Recuerda que para cada malloc debe haber un free correspondiente (normalmente), así que si alguna vez <em>tú</em> has llamado a malloc en alguna parte de tu código, <em>tú</em> debes llamar free.</p>
+<p>Por último, usaremos un hash map para almacenar a nuestros dos criminales, sanchez y martinez. Para crear una hash table con stb_ds, necesitamos definir un struct que contenga dos campos, llamados key y value. En nuestro caso:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdbool.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>key;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">bool</span> value;
+</span></span><span style="display:flex;"><span>} Hashmap;
+</span></span></code></pre></div><p>Esta hash table usa como llave una string de C, por lo que será del tipo char*, el nombre del fugitivo. El value es un booleano, que indica si está libre o no. Usarlo es tan sencillo como:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>   Hashmap <span style="color:#f92672">*</span>map <span style="color:#f92672">=</span> NULL; <span style="color:#75715e">// Nueva hash table de nuestro tipo hash_string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>   <span style="color:#a6e22e">stbds_hmput</span>(map,sanchez.name.str , true); <span style="color:#75715e">// Insertamos a sanchez
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>   <span style="color:#a6e22e">stbds_hmput</span>(map, martinez.name.str, false); <span style="color:#75715e">// Insertamos a martinez
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>   <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Is Sanchez free?: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">stbds_hmget</span>(map, <span style="color:#e6db74">&#34;Sanchez&#34;</span>)); <span style="color:#75715e">// 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>   <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Is Martinez free?: %d</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">stbds_hmget</span>(map, <span style="color:#e6db74">&#34;Martinez&#34;</span>)); <span style="color:#75715e">// 0
+</span></span></span></code></pre></div><p>¡Y ya está! Obviamente hay más funciones disponibles, pero esta es la básica. De nuevo, puedes leer la documentación. Para el tipo de key o value, podemos utilizar cualquier tipo. Podemos hacer que la key sea directamente de tipo Criminal o *Criminal, y funcionaría igual.
+Cabe resaltar, que dada la naturaleza de C, suficiente es poder usar magia del preprocesador para obtener una librería más o menos genérica como esta, pero habrá operaciones con hash maps que no soporta. Existen muchas más librerías que implementan estas estructuras de datos, tan solo tienes que buscar la que más se adecúe a tus necesidades.</p>
+<h2 id="segunda-solución">Segunda solución</h2>
+<p>La segunda solución al problema de no tener estas estructuras de datos en la librería estándar es crear las tuyas propias. En la siguiente parte, veremos cómo hacerlo.</p>
+
+</article>
+
+            </div>
+        </main>
+    </body>
+</html>
