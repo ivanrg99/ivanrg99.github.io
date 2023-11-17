@@ -9,6 +9,13 @@
     <lastBuildDate>Thu, 25 Aug 2022 21:30:04 +0800</lastBuildDate>
     <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     <item>
+      <title>HashMaps y Arrays Dinámicos en C Parte 2</title>
+      <link>/hash_array_part2/</link>
+      <pubDate>Fri, 17 Nov 2023 16:00:13 +0100</pubDate>
+      <guid>/hash_array_part2/</guid>
+      <description>Introducción Vamos al lío. Los arrays dinámicos son de las estructuras de datos más fáciles de hacer, pero pueden presentar algunos problemas (haré algún artículo al respecto en el futuro). Es más, en muchos programas en C, no se suelen utilizar. No por los supuestos problemas que tienen (esto no es algo de C, es un problema con la estructura de datos en si misma que tienen también otros lenguajes como C++ o Go), sino porque existen otras formas de manejar la memoria.</description>
+    </item>
+    <item>
       <title>HashMaps y Arrays Dinámicos en C Parte 1</title>
       <link>/hash_array_part1/</link>
       <pubDate>Thu, 16 Nov 2023 20:30:52 +0100</pubDate>

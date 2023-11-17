@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es-Es"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <meta name="description" content="Introducción Vamos al lío. Los arrays dinámicos son de las estructuras de datos más fáciles de hacer, pero pueden presentar algunos problemas (haré algún artículo al respecto en el futuro). Es más, en muchos programas en C, no se suelen utilizar. No por los supuestos problemas que tienen (esto no es algo de C, es un problema con la estructura de datos en si misma que tienen también otros lenguajes como C&#43;&#43; o Go), sino porque existen otras formas de manejar la memoria.">  
+
+  <title>
+    
+      HashMaps y Arrays Dinámicos en C Parte 2
+    
+  </title>
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/" />
+  
+  
+  
+  <link rel="stylesheet" href="/css/main.c5af9bae99b4a3d315b9f39305ffff27e9c3383fbbfd8b5fcaf2237667021a333a982fb958d1813a720b0a660b14022337553ae1ca93ef2ee17c4ae628ac19cb.css" integrity="sha512-xa&#43;brpm0o9MVufOTBf//J&#43;nDOD&#43;7/YtfyvIjdmcCGjM6mC&#43;5WNGBOnILCmYLFAIjN1U64cqT7y7hfErmKKwZyw==" />
+  
+</head>
+<body a="auto">
+        <main class="page-content" aria-label="Content">
+            <div class="w">
+<a href="/">..</a>
+
+
+<article>
+    <p class="post-meta">
+        <time datetime="2023-11-17 16:00:13 &#43;0100 CET">
+            2023-11-17
+        </time>
+    </p>
+
+    <h1>HashMaps y Arrays Dinámicos en C Parte 2</h1>
+
+    
+
+    <h2 id="introducción">Introducción</h2>
+<p>Vamos al lío. Los arrays dinámicos son de las estructuras de datos más fáciles de hacer, pero pueden presentar algunos problemas (haré algún artículo al respecto en el futuro).
+Es más, en muchos programas en C, no se suelen utilizar. No por los supuestos problemas que tienen (esto no es algo de C, es un problema con la estructura de datos en si misma que tienen también otros lenguajes como C++ o Go), sino porque existen otras formas de manejar la memoria. No obstante, esta serie de artículos es para quitar la tirria de usar C, y mucha gente está acostumbrada a pensar en arrays como arrays dinámicos. Pero primero&hellip;</p>
+<h2 id="qué-es-un-array-dinámico">¿Qué es un array dinámico?</h2>
+<p>Básicamente como un array normal, pero que no tiene un máximo de memoria asignada, es decir, puedes añadirle elementos constantemente hasta que te quedes sin memoria.
+Lenguajes de programación como JavaScript (o Python con sus listas) usan este tipo de arrays por defecto porque son más flexibles y cómodos de usar. No voy perder mucho
+más tiempo explicando, asumo que conoces esta estructura de datos (del mismo modo que asumo que al menos te has acabado un libro o curso de C básico). ¿Cómo implementar uno en C?</p>
+<h2 id="implementación">Implementación</h2>
+<p>No haremos en esta demostración una librería genérica de arrays dinámicos en C, ni implementaremos todas las operaciones posibles ni tendremos en cuenta todos
+los edge-cases que puedan haber. Simplemente cogeremos nuestro ejemplo de la <a href="/hash_array_part1">parte 1 de esta serie</a>, (el array dinámico de motes)
+y lo haremos nosotros mismos sin utilizar ninguna librería externa. Fácil y sencillo. Empezando por nuestro nuevo struct:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string <span style="color:#f92672">*</span>array;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> cap;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} da_string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Le damos control al usuario para que de una capacidad inicial al array
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">da_string_init</span>(da_string <span style="color:#f92672">*</span>d, <span style="color:#66d9ef">size_t</span> capacity)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">=</span> capacity;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>array <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#66d9ef">sizeof</span>(string) <span style="color:#f92672">*</span> capacity);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">da_string_free</span>(da_string <span style="color:#f92672">*</span>d)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">free</span>(d<span style="color:#f92672">-&gt;</span>array);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>El nombre de <em>array</em> para nuestro array de strings no es el mejor, pero nos vale para hacer la demostración más clara.
+Ese será nuestro puntero a nuestro array de elementos de string.</p>
+<p><em>len</em> indicará el número de elementos que hay en el array y <em>cap</em> el número máximo de elementos que <em>array</em> puede almacenar. En un array, recordamos que la memoria que usa éste es igual al número de elementos que contiene multiplicado por la memoria que ocupa dicho elemento.</p>
+<p>Cuando declaramos un array dinámico, la memoria que utilizamos para el array subyacente no será la justa y necesaria, sino que siempre tendremos algo más de la necesaria (es decir, <em>cap</em> no será siempre igual a <em>len</em>). ¿Por qué? Aunque parezca que desperdiciamos memoria, en la práctica vamos a estar añadiendo elementos al array y borrándolos constantemente. Si cada vez que hiciéramos esto tuviéramos que pedirle al sistema operativo memoria nueva (ya sea menos cantidad o más), acabaríamos degradando el rendimiento del array considerablemente
+(y si por algún motivo no quisiéramos desperdiciar memoria, la magia de implementar tus propias estructuras de datos es que puedes ajustarlas a tu gusto. En este ejemplo, usamos esta estrategia, que es la más común y la implementación que utilizan todos los lenguajes de programación modernos en sus librerías estándar).</p>
+<p>Al pedirle más memoria al sistema operativo de la que necesitamos, podemos añadir elementos manteniendo O(1) en la gran mayoría de casos. En el peor de los casos, sería O(n). Para ver esto en acción, pasaremos a la función que añade elementos al array dinámico:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">da_string_push</span>(da_string <span style="color:#f92672">*</span>d, string s)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (d<span style="color:#f92672">-&gt;</span>len <span style="color:#f92672">==</span> d<span style="color:#f92672">-&gt;</span>cap)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">*=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>        d<span style="color:#f92672">-&gt;</span>array <span style="color:#f92672">=</span> <span style="color:#a6e22e">realloc</span>(d<span style="color:#f92672">-&gt;</span>array, d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">*</span> <span style="color:#66d9ef">sizeof</span>(string));
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>array[d<span style="color:#f92672">-&gt;</span>len] <span style="color:#f92672">=</span> s;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Vemos que en el mejor de los casos, donde  <em>len</em> es menor que <em>cap</em>, añadir un elemento es tan fácil como acceder a la última posición del array
+(marcada por <em>len</em>) y copiar nuestra string. Después, incrementamos <em>len</em>, ya que ahora hay un elemento de más en nuestro array.</p>
+<p>En el peor de los casos, cuando la cantidad de elementos en el array es la misma a la capacidad, no podemos simplemente hacer esto (ya que no nos queda más memoria en el array).
+Tenemos que pedirle al sistema operativo que nos dé más memoria y copiar todos los valores que se encontraban en la región de memoria vieja a la nueva, además de liberar la memoria vieja. Todo esto cuesta ciclos de ejecución, así que nos aseguramos de que, cada vez que ocurra, incrementar nuestra capacidad por 2, para tener así cada vez más memoria y reducir el número de veces que tenemos que llamar a <em>realloc</em>.
+Es por eso que permitimos al usuario pasar una capacidad inicial a nuestro array en la función <em>init</em>: cuanto más alto el número, más memoria consume, pero más barato es añadir elementos. Muchos lenguajes de programación como C++, Rust, Go o Java te permiten crear tus arrays dinámicos con una capacidad inicial para poder optimizarlos mejor según tu caso concreto.</p>
+<p>Para ser breves, no comprobamos si los punteros son NULL o los valores de retorno de <em>realloc</em>, pero esta función de aquí es la más &ldquo;complicada&rdquo;. ¡Ya tenemos nuestro array dinámico! Y con muy pocas líneas de código y 0 magia.</p>
+<p>Para darle un toque final, implementaremos una función <em>pop</em> para nuestro array dinámico:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>string <span style="color:#a6e22e">da_string_pop</span>(da_string <span style="color:#f92672">*</span>d)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len<span style="color:#f92672">--</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> d<span style="color:#f92672">-&gt;</span>array[d<span style="color:#f92672">-&gt;</span>len];
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Simplemente decrementamos la cantidad de elementos en el array y devolvemos una copia del último.</p>
+<h2 id="final">Final</h2>
+<p>Como ejemplo final, tenemos este main.c</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>str;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define string(s) \
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    (string) { (char *)s, strlen(s) }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string <span style="color:#f92672">*</span>array;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> cap;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">size_t</span> len;
+</span></span><span style="display:flex;"><span>} da_string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">da_string_init</span>(da_string <span style="color:#f92672">*</span>d, <span style="color:#66d9ef">size_t</span> capacity)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">=</span> capacity;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>array <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#66d9ef">sizeof</span>(string) <span style="color:#f92672">*</span> capacity);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">da_string_free</span>(da_string <span style="color:#f92672">*</span>d)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">free</span>(d<span style="color:#f92672">-&gt;</span>array);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">da_string_push</span>(da_string <span style="color:#f92672">*</span>d, string s)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (d<span style="color:#f92672">-&gt;</span>len <span style="color:#f92672">==</span> d<span style="color:#f92672">-&gt;</span>cap)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">*=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>        d<span style="color:#f92672">-&gt;</span>array <span style="color:#f92672">=</span> <span style="color:#a6e22e">realloc</span>(d<span style="color:#f92672">-&gt;</span>array, d<span style="color:#f92672">-&gt;</span>cap <span style="color:#f92672">*</span> <span style="color:#66d9ef">sizeof</span>(string));
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>array[d<span style="color:#f92672">-&gt;</span>len] <span style="color:#f92672">=</span> s;
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>string <span style="color:#a6e22e">da_string_pop</span>(da_string <span style="color:#f92672">*</span>d)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    d<span style="color:#f92672">-&gt;</span>len<span style="color:#f92672">--</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> d<span style="color:#f92672">-&gt;</span>array[d<span style="color:#f92672">-&gt;</span>len];
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    string name;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">long</span> reward;
+</span></span><span style="display:flex;"><span>    da_string nicknames;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>} Criminal;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">criminal_init</span>(Criminal <span style="color:#f92672">*</span>c)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;&#34;</span>);
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>reward <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    da_string d;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">da_string_init</span>(<span style="color:#f92672">&amp;</span>d, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    c<span style="color:#f92672">-&gt;</span>nicknames <span style="color:#f92672">=</span> d;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    Criminal martinez;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">criminal_init</span>(<span style="color:#f92672">&amp;</span>martinez);
+</span></span><span style="display:flex;"><span>    martinez.name <span style="color:#f92672">=</span> <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;Martinez&#34;</span>);
+</span></span><span style="display:flex;"><span>    martinez.reward <span style="color:#f92672">=</span> <span style="color:#ae81ff">1000</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Cap: %zu</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.cap);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">da_string_push</span>(<span style="color:#f92672">&amp;</span>martinez.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El bueno&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Cap: %zu</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.cap);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">da_string_push</span>(<span style="color:#f92672">&amp;</span>martinez.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El feo&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Cap: %zu</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.cap);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">da_string_push</span>(<span style="color:#f92672">&amp;</span>martinez.nicknames, <span style="color:#a6e22e">string</span>(<span style="color:#e6db74">&#34;El malo&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Cap: %zu</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.cap);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%zu motes:</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.len);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> martinez.nicknames.len; <span style="color:#f92672">++</span>i)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.array[i].str);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    string last <span style="color:#f92672">=</span> <span style="color:#a6e22e">da_string_pop</span>(<span style="color:#f92672">&amp;</span>martinez.nicknames);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Último mote: %s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, last.str);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">%zu motes:</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.len);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">size_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> martinez.nicknames.len; <span style="color:#f92672">++</span>i)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;%s</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, martinez.nicknames.array[i].str);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">da_string_free</span>(<span style="color:#f92672">&amp;</span>martinez.nicknames);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Hemos conseguido implementar nuestro propio array dinámico en muy pocas líneas de código. Obviamente se puede mejorar mucho, pero la estructura en si es muy sencilla. Si ejecutas el programa verás que funciona (aunque la API se nos ha quedado un poco tosca), y además podrás examinar la capacidad del array antes de cada inserción. Si añades un <em>printf</em> antes del realloc, podrás comprobar que nuestra estrategia de duplicar la capacidad hace que conforme más elementos añadas, menos veces tendrás que llamar a <em>realloc</em>.</p>
+
+</article>
+
+            </div>
+        </main>
+    </body>
+</html>
